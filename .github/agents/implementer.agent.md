@@ -2,8 +2,6 @@
 name: Implementer
 description: Implementerar avgränsad funktion eller buggfix testdrivet med små ändringar och exakta testresultat.
 target: github-copilot
-model: GPT-6.1 Sol
-model-policy: preferred
 tools: ['read', 'search', 'edit', 'execute']
 skills: ['tdd']
 ---
