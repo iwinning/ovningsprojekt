@@ -12,14 +12,14 @@
 
 ## Fyra specialiserade agenter
 
-| Agent | Ansvar | Verktyg (önskade) | Föredragen modell |
+| Agent | Ansvar | Verktyg (önskade) | Modell |
 |---|---|---|---|
-| Researcher | Kartlägg, mät baslinje | read, search, execute | GPT-6 Luna |
-| Planner | Givet/När/Så och risker | read, search | GPT-6 Luna |
-| Implementer | Små testdrivna ändringar | read, search, edit, execute; tdd | GPT-6.1 Sol |
-| Reviewer | Oberoende säkerhets- och standardgranskning | read, search, execute | GPT-6.1 Sol |
+| Researcher | Kartlägg, mät baslinje | read, search, execute | Den valda Copilot-modellen |
+| Planner | Givet/När/Så och risker | read, search | Den valda Copilot-modellen |
+| Implementer | Små testdrivna ändringar | read, search, edit, execute; tdd | Den valda Copilot-modellen |
+| Reviewer | Oberoende säkerhets- och standardgranskning | read, search, execute | Den valda Copilot-modellen |
 
-Modellerna är **preferenser** och kan kräva byte i VS Codes modellväljare beroende på kontots tillgång. Inga modellkostnader har ännu uppmätts. Granskning och planering görs före implementation; parallella agenter ska inte redigera samma filer.
+Agenterna använder den modell som är vald i Copilot-chatten. Ett specifikt modell-ID kan anges senare när det har verifierats i VS Codes modellväljare. Inga modellkostnader har ännu uppmätts. Granskning och planering görs före implementation; parallella agenter ska inte redigera samma filer.
 
 ## Hooks: sex konkreta triggers/åtgärder
 
