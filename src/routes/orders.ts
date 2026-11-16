@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { AuthedRequest, requireCustomer } from "../auth";
 import { sendError, sendResult } from "../http";
-import { createOrder, getOrder } from "../services/orderService";
+import { cancelOrder, createOrder, getOrder } from "../services/orderService";
 import { calcPrice } from "../pricing/legacyPrice";
 
 export const orders = Router();
@@ -40,4 +40,13 @@ orders.get("/orders/:id/price", requireCustomer, async (req, res) => {
     return;
   }
   sendResult(res, await calcPrice(id));
+});
+
+orders.post("/orders/:id/cancel", requireCustomer, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) {
+    sendError(res, { code: "invalid_input", message: "Ogiltigt id." });
+    return;
+  }
+  sendResult(res, await cancelOrder(id, (req as AuthedRequest).customerId));
 });

@@ -55,9 +55,9 @@
 - **När** ägaren försöker avbryta den
 - **Så** svarar API:t `409 conflict` och ordern ändras inte.
 
-## Beslut att granska före build
+## Beslut för implementationen
 
-Kravet säger inte vilka statusar som får avbrytas eller vad en upprepad avbokning ska ge för svar. Förslaget är att endast tillåta avbokning från `new`, och svara `409 conflict` för `paid`, `shipped` och `cancelled`, även vid upprepade försök. Det ligger i linje med befintliga seed-statusar men är ett nytt affärsbeslut och behöver godkännas.
+Kravet säger inte vilka statusar som får avbrytas eller vad en upprepad avbokning ska ge för svar. Policyn som används för implementationen är att endast tillåta avbokning från `new`, och svara `409 conflict` för `paid`, `shipped` och `cancelled`, även vid upprepade försök. Den ligger i linje med befintliga seed-statusar men är ett affärsbeslut utöver ordalydelsen i user storyn. Användaren bekräftade i sin instruktion att planen ska användas som beslut.
 
 Föreslagen gränstolkning är ålder `<= 30 minuter`; ålder `> 30 minuter` nekas. Beslutet om 403 för en annan kund följer befintligt `getOrder`-mönster.
 
@@ -108,4 +108,4 @@ Inga ändringar i `db/schema.sql`, seed-data eller migrations föreslås: den be
 
 Det tidigare rapporterade `GET /orders/:id/price`-felet är separat. Ingen rotorsak verifierades här och prisflödet ingår inte i denna plan.
 
-**Stopp:** Detta dokument är en plan för granskning. Börja inte build förrän beslutspunkterna har granskats. Ingen kod, testfil, databasfil eller ADR ändras i denna fas.
+**Fasgräns:** Den ursprungliga planfasen avslutades före build. Beslutet ovan bekräftades därefter av användaren; den efterföljande builden dokumenteras i `docs/work/feature-build.md`.

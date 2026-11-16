@@ -81,3 +81,76 @@ export async function getOrder(orderId: number, customerId: number): Promise<Res
   );
   return ok({ ...order, lines: lines.rows });
 }
+
+export async function cancelOrder(
+  orderId: number,
+  customerId: number,
+  testNow?: Date,
+): Promise<Result<{ id: number; status: "cancelled" }>> {
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const orderResult = await client.query<{
+      id: number;
+      customerId: number;
+      status: string;
+    }>(
+      `SELECT id, customer_id AS "customerId", status
+         FROM orders
+        WHERE id = $1
+        FOR UPDATE`,
+      [orderId],
+    );
+    if (orderResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return err("not_found", `Beställning ${orderId} finns inte.`);
+    }
+
+    const order = orderResult.rows[0];
+    if (order.customerId !== customerId) {
+      await client.query("ROLLBACK");
+      return err("forbidden", "Beställningen tillhör en annan kund.");
+    }
+    if (order.status !== "new") {
+      await client.query("ROLLBACK");
+      return err("conflict", "Beställningens status tillåter inte avbokning.");
+    }
+
+    const timeResult = await client.query<{ withinWindow: boolean }>(
+      `WITH cancellation_time AS MATERIALIZED (
+         SELECT COALESCE($2::timestamptz, clock_timestamp()) AS value
+       )
+       SELECT orders.created_at <= cancellation_time.value
+          AND orders.created_at >= cancellation_time.value - INTERVAL '30 minutes'
+            AS "withinWindow"
+         FROM orders
+         CROSS JOIN cancellation_time
+        WHERE orders.id = $1`,
+      [orderId, testNow ?? null],
+    );
+    if (!timeResult.rows[0].withinWindow) {
+      await client.query("ROLLBACK");
+      return err("conflict", "Beställningen kan bara avbokas inom 30 minuter.");
+    }
+
+    const updateResult = await client.query(
+      `UPDATE orders
+          SET status = 'cancelled'
+        WHERE id = $1 AND customer_id = $2 AND status = 'new'
+        RETURNING id`,
+      [orderId, customerId],
+    );
+    if (updateResult.rowCount !== 1) {
+      await client.query("ROLLBACK");
+      return err("conflict", "Beställningens status har ändrats.");
+    }
+
+    await client.query("COMMIT");
+    return ok({ id: orderId, status: "cancelled" });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+}
