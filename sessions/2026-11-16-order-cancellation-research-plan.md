@@ -2,7 +2,7 @@
 
 **Datum:** 2026-11-16  
 **Start:** cirka 23:02 +01:00 (tid noterad i researchfasen)  
-**Omfattning:** Fas 1 Research, Fas 2 Plan och Fas 3 Build för user story 2. Review och Verify återstår.
+**Omfattning:** Fas 1 Research, Fas 2 Plan, Fas 3 Build och Fas 4 Review för user story 2. Verify återstår.
 
 ## Arbete och resultat
 
@@ -13,8 +13,12 @@
 - Grönt: fokuserat avbokningsurval 11/11 gröna efter slutlig ändring. Hela ordertestfilen efter build: 19 gröna, 1 rött (pris-endpoint 404).
 - Användaren bekräftade policyn i planen; ADR 0001 dokumenterar statuspolicy, DB-klocka och alternativ.
 - Implementationscommit: `656508fc08c93056bb75e77e3cefe4f7e3f612fa`. Dokumentationscommit för buildrapport/session tillkommer.
-- `npm test` full suite, lint, typecheck och formatkontroll har inte körts i build; dessa hör till Verify. Review har inte startat.
+- `npm test` full suite, lint, typecheck och formatkontroll har inte körts i build; dessa hör till Verify.
 - Researchfasens kontroller rapporterades separat: `npm run typecheck` och `npm run lint` godkända av Researcher-agenten; inga tester kördes då.
+- Reviewer-agenten genomförde oberoende skrivskyddad granskning 2026-11-17 12:59 +01:00; rapporten finns i `docs/work/feature-review.md`.
+- Bekräftat reviewfynd: Express 4 async-route för avbokning saknar `try/catch`/`next(err)` och appen saknar central felhanterare, så oväntade DB-fel kan ge ohanterad Promise-rejektion. Rekommendationen är centraliserad/fångad felhantering med generiskt 500. Implementationen ändrades inte.
+- Review noterade också att samtidighetstestet provar två avbokningar, inte avbokning samtidigt med en annan statusuppdatering; detta är en testtäckningsbegränsning, inte ett bekräftat fel.
+- Review utförde inga tester, lint, typecheck eller formatkontroll. Verify är inte startat.
 
 ## Beslut och öppna frågor
 
