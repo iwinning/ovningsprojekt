@@ -107,9 +107,7 @@ describe("POST /orders/:id/cancel", () => {
       .mockImplementation(() => Promise.reject(new Error("sensitive database connection details")));
 
     try {
-      const res = await request(app)
-        .post("/orders/1043/cancel")
-        .set("X-Customer-Id", "3");
+      const res = await request(app).post("/orders/1043/cancel").set("X-Customer-Id", "3");
 
       expect(res.status).toBe(500);
       expect(res.body).toEqual({
@@ -127,9 +125,7 @@ describe("POST /orders/:id/cancel", () => {
   it("avbryter en egen ny beställning inom tidsgränsen", async () => {
     await db.query("UPDATE orders SET created_at = clock_timestamp() WHERE id = $1", [1043]);
 
-    const res = await request(app)
-      .post("/orders/1043/cancel")
-      .set("X-Customer-Id", "3");
+    const res = await request(app).post("/orders/1043/cancel").set("X-Customer-Id", "3");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ id: 1043, status: "cancelled" });
@@ -138,27 +134,21 @@ describe("POST /orders/:id/cancel", () => {
   });
 
   it("returnerar 400 för ett ogiltigt id", async () => {
-    const res = await request(app)
-      .post("/orders/abc/cancel")
-      .set("X-Customer-Id", "3");
+    const res = await request(app).post("/orders/abc/cancel").set("X-Customer-Id", "3");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("invalid_input");
   });
 
   it("returnerar 404 när beställningen saknas", async () => {
-    const res = await request(app)
-      .post("/orders/9999/cancel")
-      .set("X-Customer-Id", "3");
+    const res = await request(app).post("/orders/9999/cancel").set("X-Customer-Id", "3");
 
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("not_found");
   });
 
   it("returnerar 403 för en annan kunds beställning", async () => {
-    const res = await request(app)
-      .post("/orders/1043/cancel")
-      .set("X-Customer-Id", "1");
+    const res = await request(app).post("/orders/1043/cancel").set("X-Customer-Id", "1");
 
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("forbidden");
@@ -171,9 +161,7 @@ describe("POST /orders/:id/cancel", () => {
   });
 
   it("returnerar 409 när statusen inte tillåter avbokning", async () => {
-    const res = await request(app)
-      .post("/orders/1042/cancel")
-      .set("X-Customer-Id", "1");
+    const res = await request(app).post("/orders/1042/cancel").set("X-Customer-Id", "1");
 
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("conflict");
@@ -185,9 +173,7 @@ describe("POST /orders/:id/cancel", () => {
       [1043],
     );
 
-    const res = await request(app)
-      .post("/orders/1043/cancel")
-      .set("X-Customer-Id", "3");
+    const res = await request(app).post("/orders/1043/cancel").set("X-Customer-Id", "3");
 
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("conflict");
@@ -242,9 +228,7 @@ describe("POST /orders/:id/cancel", () => {
     await db.query("UPDATE orders SET created_at = clock_timestamp() WHERE id = $1", [1043]);
     await cancelOrder(1043, 3);
 
-    const res = await request(app)
-      .post("/orders/1043/cancel")
-      .set("X-Customer-Id", "3");
+    const res = await request(app).post("/orders/1043/cancel").set("X-Customer-Id", "3");
 
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("conflict");
@@ -252,8 +236,7 @@ describe("POST /orders/:id/cancel", () => {
 
   it("serialiserar samtidiga avbokningar av samma beställning", async () => {
     await db.query("UPDATE orders SET created_at = clock_timestamp() WHERE id = $1", [1043]);
-    const cancel = () =>
-      request(app).post("/orders/1043/cancel").set("X-Customer-Id", "3");
+    const cancel = () => request(app).post("/orders/1043/cancel").set("X-Customer-Id", "3");
 
     const responses = await Promise.all([cancel(), cancel()]);
 
