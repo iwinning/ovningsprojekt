@@ -192,6 +192,23 @@ def test_empty_lines_and_unknown_discount_produce_zero(load_price_module):
     ]
 
 
+def test_order_id_and_discount_values_are_query_parameters(load_price_module):
+    connection = FakeConnection(
+        discount_code="VAR' OR 1=1 --",
+        lines=[(1, Decimal("10.00"))],
+        discount_percent=10,
+    )
+    module = load_price_module(connection)
+
+    module.calc_price(1044)
+
+    assert [params for _, params in connection.queries] == [
+        (1044,),
+        (1044,),
+        ("VAR' OR 1=1 --",),
+    ]
+
+
 def test_characterized_price_values_keep_json_decimal_strings(load_price_module):
     module = load_price_module(
         FakeConnection(
