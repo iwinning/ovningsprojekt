@@ -7,10 +7,13 @@ from decimal import Decimal
 import psycopg
 
 DB = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/butik")
-conn = psycopg.connect(DB, autocommit=True)
 
 MOMS = 25
 LOGG = os.path.join(os.path.dirname(__file__), "price_calc.log")
+
+
+def connect_db():
+    return psycopg.connect(DB, autocommit=True)
 
 
 class Pris:
@@ -25,8 +28,15 @@ def _kapa(x):
     return Decimal(int(x * 100)) / 100
 
 
-def calc_price(order_id):
-    cur = conn.cursor()
+def calc_price(order_id, connection=None):
+    if connection is None:
+        with connect_db() as managed_connection:
+            return _calc_price(order_id, managed_connection)
+    return _calc_price(order_id, connection)
+
+
+def _calc_price(order_id, connection):
+    cur = connection.cursor()
     cur.execute("select discount_code from orders where id = %s", (order_id,))
     rad = cur.fetchone()
     if rad == None:

@@ -31,6 +31,8 @@ class FakeCursor:
                 if self.connection.discount_percent is not None
                 else []
             )
+        elif "select id from orders where status = 'paid'" in normalized_query:
+            self.rows = list(self.connection.paid_order_ids)
         else:
             raise AssertionError(f"Unexpected SQL in fake database: {query}")
 
@@ -49,12 +51,21 @@ class FakeConnection:
         discount_code=None,
         lines=(),
         discount_percent=None,
+        paid_order_ids=(),
     ):
         self.order_exists = order_exists
         self.discount_code = discount_code
         self.lines = tuple(lines)
         self.discount_percent = discount_percent
+        self.paid_order_ids = list(paid_order_ids)
         self.queries = []
+        self.closed = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        self.closed = True
 
     def cursor(self):
         return FakeCursor(self)
@@ -70,11 +81,43 @@ def load_price_module(monkeypatch):
         module = importlib.util.module_from_spec(spec)
         monkeypatch.setitem(sys.modules, module_name, module)
         spec.loader.exec_module(module)
-        module.conn = connection
+        module._fake_connection = connection
         module.LOGG = str(Path(__file__).parent)
         return module
 
     return load
+
+
+def test_import_does_not_open_a_database_connection(monkeypatch):
+    calls = []
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:1/fake_only")
+    monkeypatch.setattr(
+        psycopg,
+        "connect",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+    module_name = "price_calc_import_without_database"
+    spec = importlib.util.spec_from_file_location(module_name, MODULE_PATH)
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, module_name, module)
+
+    spec.loader.exec_module(module)
+
+    assert calls == []
+
+
+def test_calc_price_closes_its_managed_connection(load_price_module):
+    connection = FakeConnection(lines=[(1, Decimal("10.00"))])
+    module = load_price_module(connection)
+
+    price = module.calc_price(1042)
+
+    assert (price.net, price.vat, price.total) == (
+        Decimal("10"),
+        Decimal("2.5"),
+        Decimal("12.5"),
+    )
+    assert connection.closed
 
 
 def test_price_without_discount_preserves_decimal_values_and_text(load_price_module):
@@ -87,7 +130,7 @@ def test_price_without_discount_preserves_decimal_values_and_text(load_price_mod
         )
     )
 
-    price = module.calc_price(1042)
+    price = module.calc_price(1042, module._fake_connection)
 
     assert (price.net, price.vat, price.total) == (
         Decimal("950"),
@@ -110,7 +153,7 @@ def test_discount_and_vat_are_truncated_separately(load_price_module):
         )
     )
 
-    price = module.calc_price(1044)
+    price = module.calc_price(1044, module._fake_connection)
 
     assert (price.net, price.vat, price.total) == (
         Decimal("179.91"),
@@ -128,7 +171,7 @@ def test_expired_discount_is_still_applied(load_price_module):
         )
     )
 
-    price = module.calc_price(1045)
+    price = module.calc_price(1045, module._fake_connection)
 
     assert (price.net, price.vat, price.total) == (
         Decimal("551.65"),
@@ -153,7 +196,7 @@ def test_truncation_is_toward_zero(load_price_module, value, expected):
 def test_negative_amount_preserves_truncation_and_vat_behavior(load_price_module):
     module = load_price_module(FakeConnection(lines=[(1, Decimal("-1.239"))]))
 
-    price = module.calc_price(1048)
+    price = module.calc_price(1048, module._fake_connection)
 
     assert (price.net, price.vat, price.total) == (
         Decimal("-1.23"),
@@ -170,7 +213,7 @@ def test_negative_amount_preserves_truncation_and_vat_behavior(load_price_module
 def test_missing_order_returns_none(load_price_module):
     module = load_price_module(FakeConnection(order_exists=False))
 
-    assert module.calc_price(9999) is None
+    assert module.calc_price(9999, module._fake_connection) is None
 
 
 def test_empty_lines_and_unknown_discount_produce_zero(load_price_module):
@@ -178,7 +221,7 @@ def test_empty_lines_and_unknown_discount_produce_zero(load_price_module):
         FakeConnection(discount_code="UNKNOWN", lines=[], discount_percent=None)
     )
 
-    price = module.calc_price(1049)
+    price = module.calc_price(1049, module._fake_connection)
 
     assert (price.net, price.vat, price.total) == (
         Decimal("0"),
@@ -200,7 +243,7 @@ def test_order_id_and_discount_values_are_query_parameters(load_price_module):
     )
     module = load_price_module(connection)
 
-    module.calc_price(1044)
+    module.calc_price(1044, connection)
 
     assert [params for _, params in connection.queries] == [
         (1044,),
@@ -218,7 +261,7 @@ def test_characterized_price_values_keep_json_decimal_strings(load_price_module)
             ]
         )
     )
-    price = module.calc_price(1042)
+    price = module.calc_price(1042, module._fake_connection)
 
     output = json.dumps(
         {"net": str(price.net), "vat": str(price.vat), "total": str(price.total)}
