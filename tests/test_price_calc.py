@@ -306,7 +306,8 @@ def test_batch_price_calculation_preserves_results_with_constant_query_count(
     connection = FakeConnection(
         batch_orders={41: None, 42: "SALE10"},
         batch_lines=[
-            (41, 1, Decimal("10.00")),
+            (41, 2, Decimal("375.00")),
+            (41, 1, Decimal("200.00")),
             (42, 1, Decimal("199.90")),
         ],
         batch_discounts={"SALE10": Decimal("10")},
@@ -319,14 +320,17 @@ def test_batch_price_calculation_preserves_results_with_constant_query_count(
         order_id: (price.net, price.vat, price.total)
         for order_id, price in prices.items()
     } == {
-        41: (Decimal("10"), Decimal("2.5"), Decimal("12.5")),
+        41: (Decimal("950"), Decimal("237.5"), Decimal("1187.5")),
         42: (Decimal("179.91"), Decimal("44.97"), Decimal("224.88")),
     }
     individual_prices = {
         41: module.calc_price(
             41,
             FakeConnection(
-                lines=[(1, Decimal("10.00"))],
+                lines=[
+                    (2, Decimal("375.00")),
+                    (1, Decimal("200.00")),
+                ],
             ),
         ),
         42: module.calc_price(
