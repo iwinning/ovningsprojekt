@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { Result, ok, err } from "../result";
 
@@ -16,7 +17,10 @@ export function resolveLegacyPython(
 
   const platformPath = platform === "win32" ? path.win32 : path.posix;
   const executable = platform === "win32" ? ["Scripts", "python.exe"] : ["bin", "python"];
-  return platformPath.join(projectRoot, ".venv", ...executable);
+  const virtualenvPython = platformPath.join(projectRoot, ".venv", ...executable);
+  if (existsSync(virtualenvPython)) return virtualenvPython;
+
+  return platform === "win32" ? "python" : "python3";
 }
 
 function isNotFoundResponse(value: unknown): boolean {

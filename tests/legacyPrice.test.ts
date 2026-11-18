@@ -1,10 +1,12 @@
 import { ChildProcess, execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import request from "supertest";
 import { createApp } from "../src/app";
 import { getOrder } from "../src/services/orderService";
 import { resolveLegacyPython, calcPrice } from "../src/pricing/legacyPrice";
 
 jest.mock("node:child_process", () => ({ execFile: jest.fn() }));
+jest.mock("node:fs", () => ({ existsSync: jest.fn() }));
 jest.mock("../src/services/orderService", () => ({
   createOrder: jest.fn(),
   cancelOrder: jest.fn(),
@@ -12,6 +14,7 @@ jest.mock("../src/services/orderService", () => ({
 }));
 
 const execFileMock = execFile as unknown as jest.Mock;
+const existsSyncMock = existsSync as jest.MockedFunction<typeof existsSync>;
 const getOrderMock = getOrder as jest.MockedFunction<typeof getOrder>;
 const app = createApp();
 
@@ -32,19 +35,37 @@ function mockExecFile(error: ExecFailure, stdout: string): void {
 }
 
 describe("resolveLegacyPython", () => {
+  beforeEach(() => {
+    existsSyncMock.mockReset();
+  });
+
   it("uses LEGACY_PYTHON when configured", () => {
     expect(resolveLegacyPython({ LEGACY_PYTHON: "custom-python" }, "win32", "C:\\project")).toBe(
       "custom-python",
     );
+    expect(existsSyncMock).not.toHaveBeenCalled();
   });
 
   it.each([
     ["win32", "C:\\project\\.venv\\Scripts\\python.exe"],
     ["linux", "/project/.venv/bin/python"],
-  ] as const)("uses the project virtualenv on %s", (platform, expected) => {
+  ] as const)("uses the project virtualenv on %s when present", (platform, expected) => {
+    existsSyncMock.mockReturnValue(true);
     const root = platform === "win32" ? "C:\\project" : "/project";
     expect(resolveLegacyPython({}, platform, root)).toBe(expected);
   });
+
+  it.each([
+    ["win32", "python"],
+    ["linux", "python3"],
+  ] as const)(
+    "falls back to the PATH interpreter on %s when venv is absent",
+    (platform, expected) => {
+      existsSyncMock.mockReturnValue(false);
+      const root = platform === "win32" ? "C:\\project" : "/project";
+      expect(resolveLegacyPython({}, platform, root)).toBe(expected);
+    },
+  );
 });
 
 describe("calcPrice", () => {
