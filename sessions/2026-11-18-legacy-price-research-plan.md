@@ -65,3 +65,16 @@
 - Fullständiga verifierade fynd, risker och förbättringsförslag finns i `docs/work/legacy-price-review.md`.
 
 Build och Review är klara. Verify/slutrapport utöver Build-kontroller är inte startad.
+
+## VG-kvalitetsavslut
+
+**Arbetspass:** 2026-11-18 17:03:18–17:13:59 +01:00 (10 min 41 sek väggklocketid, inklusive väntan; aktiv arbetstid ej mätt). Pris- och rabattregler lämnades oförändrade.
+
+- **Hook:** rotorsaken var att skyddet skannade hela serialiserade tool-inputen och kombinerade testpaths med skip-/borttagningssyntax utan målfilskoppling. Regressionstestet gav 7 pass / 1 fail före rättning; efter scope: 8/8 pass. Testfilborttagning, explicit Delete File-patch och testskip nekas fortsatt.
+- **API:** kompletterade pris-endpointens 400/401/403/404. Riktat urval: 5 testfall passerade, inklusive tidigare lyckat test; full Jest: 47/47.
+- **N+1:** före mättes mot nattjobbsfilen från historisk parent-version med fake DB: 3 ordrar = 10 SQL-frågor. Efter testmätning: 3 ordrar = 4 queries (rapportdatum + batchordrar, rader, rabatter). `calc_prices` använder samma Python-aritmetik som `calc_price`; batchtest jämförde både ett flerradigt orderbelopp och rabattpris med enkelberäkningen. Python-tester: 20/20.
+- **Format:** arbetsfilerna var CRLF medan index var LF; standardkörningen flaggade 16 TS-filer. `--end-of-line crlf` minskade det till en formatteringsavvikelse. `.prettierrc.json` fick `endOfLine: auto`; bara radbrytningar i den kvarvarande testfilen formaterades. `npm run format:check` blev grönt.
+- **Slutkontroller:** Python 20/20, Jest 47/47 (3 suites) mot isolerade `butik_test`, hooktester 8/8, lint, typecheck, format:check och `git diff --check` godkända. `TEST_DATABASE_URL` var ej satt; test-helperns fallback är `butik_test`. Ingen destruktiv DB-operation kördes.
+- Före/efter-mätningar och kvarstående, utanför scope liggande risker är dokumenterade i `docs/work/legacy-price-quality.md`.
+- Commits: `f29ba34d12602fafba04b5c4ce3b49cf8385d797`, `dfd190b564a05be98483aed87a6f1364358ff30c`, `b131c15c398c9d7e0ec3b1d93df3e09143c70edc`, `72b8344028c4a296a0554075c04832effe96024e`, `85b07b831491e62138e021234bcc982afda5ee6f`.
+- Pre-existerande `package-lock.json`-ändring och `sessions/last-state.md` lämnades orörda.
