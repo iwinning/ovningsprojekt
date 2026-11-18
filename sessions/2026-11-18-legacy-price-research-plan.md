@@ -52,4 +52,16 @@
 - `dc3597c66e520552828833e39be5ddce46231d49` – portabel Python-brygga och sanerade fel.
 - `6ab67d75c65d1f537a8060cd633a5f5094038464` – PATH-fallback och extra resolverkarakterisering.
 
-Review och slutrapport är inte startade; Build avslutas här i väntan på granskning.
+## Review – oberoende granskning
+
+**Granskning avslutad:** 2026-11-18 16:35:15 +01:00. Reviewer-agent granskade diffen `fe87ebe..HEAD`, kursstandard, plan/buildrapporter och berörda implementationer/tester. Inga implementationer, testfiler eller databasobjekt ändrades i Review.
+
+- Reviewer bekräftade oförändrad pris-/rabatt-/moms-/trunkeringslogik, parametriserade Python-frågor, explicit anslutningslivscykel, korrekt ägarskapskontroll samt 404 för endast uttryckligt saknad order och generiskt 500 för operativa fel.
+- Nattjobbet är uppdaterat och använder hanterad anslutning; reviewer lyfte kvarvarande N+1-frågor (MEDIUM) per betald order.
+- Kvarvarande lågprioriterade fynd: pris-endpointen saknar route-specifika integrationstester för 400/401/403/404; `npm run format:check` misslyckas för 16 filer, inklusive ändrade.
+- Ytterligare icke-blockerande risker: DB-URL-fallback med inloggningsuppgifter ärvdes från baseline; lyckad prisberäkning loggar order-ID och belopp; bevarat Decimal-JSON-format avviker från standardens två decimaler.
+- Diffgranskningen bekräftade att befintliga testfall är fortsatt aktiva och ingen befintlig testfil tagits bort.
+- Reviewer körde Python 18/18, riktade bridge Jest-tester 15/15, lint och typecheck; formatkontroll misslyckades. Full DB-beroende Jest-svit kördes inte på nytt i Review (Build loggar 43/43). Inga databasreset/destruktiva kontroller kördes.
+- Fullständiga verifierade fynd, risker och förbättringsförslag finns i `docs/work/legacy-price-review.md`.
+
+Build och Review är klara. Verify/slutrapport utöver Build-kontroller är inte startad.
