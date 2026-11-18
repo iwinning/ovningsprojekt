@@ -73,6 +73,29 @@ describe("GET /orders/:id/price", () => {
 });
 
 describe("POST /orders/:id/cancel", () => {
+  it("returnerar ett generiskt 500 när databasen oväntat inte kan anslutas", async () => {
+    const connectSpy = jest
+      .spyOn(db, "connect")
+      .mockImplementation(() => Promise.reject(new Error("sensitive database connection details")));
+
+    try {
+      const res = await request(app)
+        .post("/orders/1043/cancel")
+        .set("X-Customer-Id", "3");
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({
+        error: {
+          code: "internal_error",
+          message: "Ett internt fel inträffade.",
+        },
+      });
+      expect(JSON.stringify(res.body)).not.toContain("sensitive database connection details");
+    } finally {
+      connectSpy.mockRestore();
+    }
+  });
+
   it("avbryter en egen ny beställning inom tidsgränsen", async () => {
     await db.query("UPDATE orders SET created_at = clock_timestamp() WHERE id = $1", [1043]);
 
