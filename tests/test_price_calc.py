@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import logging
+import runpy
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -290,3 +291,33 @@ def test_characterized_price_values_keep_json_decimal_strings(load_price_module)
     )
 
     assert output == '{"net": "950", "vat": "237.5", "total": "1187.5"}'
+
+
+def test_cli_preserves_json_decimal_strings(monkeypatch, capsys):
+    connection = FakeConnection(
+        lines=[(2, Decimal("375.00")), (1, Decimal("200.00"))]
+    )
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:1/fake_only")
+    monkeypatch.setattr(psycopg, "connect", lambda *_args, **_kwargs: connection)
+    monkeypatch.setattr(sys, "argv", [str(MODULE_PATH), "1042"])
+
+    runpy.run_path(str(MODULE_PATH), run_name="__main__")
+
+    assert capsys.readouterr().out == (
+        '{"net": "950", "vat": "237.5", "total": "1187.5"}\n'
+    )
+    assert connection.closed
+
+
+def test_cli_missing_order_preserves_error_json_and_exit_code(monkeypatch, capsys):
+    connection = FakeConnection(order_exists=False)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost:1/fake_only")
+    monkeypatch.setattr(psycopg, "connect", lambda *_args, **_kwargs: connection)
+    monkeypatch.setattr(sys, "argv", [str(MODULE_PATH), "9999"])
+
+    with pytest.raises(SystemExit) as exit_info:
+        runpy.run_path(str(MODULE_PATH), run_name="__main__")
+
+    assert exit_info.value.code == 1
+    assert capsys.readouterr().out == '{"error": "finns inte"}\n'
+    assert connection.closed
