@@ -70,6 +70,34 @@ describe("GET /orders/:id/price", () => {
     expect(res.status).toBe(200);
     expect(Number(res.body.total)).toBe(1187.5);
   });
+
+  it("returnerar 400 för ett ogiltigt id", async () => {
+    const res = await request(app).get("/orders/abc/price").set("X-Customer-Id", "1");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("invalid_input");
+  });
+
+  it("returnerar 401 utan inloggning", async () => {
+    const res = await request(app).get("/orders/1042/price");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe("unauthorized");
+  });
+
+  it("returnerar 403 för en annan kunds beställning", async () => {
+    const res = await request(app).get("/orders/1042/price").set("X-Customer-Id", "2");
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("forbidden");
+  });
+
+  it("returnerar 404 för en beställning som saknas", async () => {
+    const res = await request(app).get("/orders/9999/price").set("X-Customer-Id", "1");
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("not_found");
+  });
 });
 
 describe("POST /orders/:id/cancel", () => {
