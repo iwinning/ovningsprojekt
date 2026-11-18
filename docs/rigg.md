@@ -6,8 +6,8 @@
 
 | Skill | Varför | Användning | Kontroll |
 |---|---|---|---|
-| `/tdd` | Nya krav med test först; undvika kod utan säkerhetsnät | Lägg till test, se rött, bygg grönt, refaktorera | Copilot läste skillen i prisfelsanalysen 2026-11-16. Baslinjen var 8/9 godkända ordertester; produktionskod ändrades inte. |
-| `/feature-flow` | Varje fas lämnar en spårbar fil | research → plan → build → review → verify | Kör i en ny Copilot-session med en user story. Kontrollera fem fasfiler. |
+| `/tdd` | Nya krav med test först; undvika kod utan säkerhetsnät | Lägg till test, se rött, bygg grönt, refaktorera | Användes under orderavbokning och Pythonmodernisering. Röda och gröna tester, testkommandon och commits finns i docs/work. |
+| `/feature-flow` | Varje fas lämnar en spårbar fil | research → plan → build → review → verify | Användes för orderavbokningen. De fem fasfilerna finns i docs/work/feature-*.md. |
 | `/review-pr` | Strukturerad kontroll av kursledarens PR | Säkerhet, struktur och kodstandard | Kör först när kursledarens PR finns och granska fynd med fil/rad. |
 
 ## Fyra specialiserade agenter
@@ -47,7 +47,7 @@ Använd **Manual permissions** i VS Code. Tillgängliga projekt-hooks kan lägga
 ## Demo och lokala verifieringar
 
 ```powershell
-# Kontrollera JSON-konfiguration och sju beslutsfall utan att starta databas
+# Kontrollera JSON-konfiguration och åtta beslutsfall utan att starta databas
 node --test .github/hooks/rigg.spec.cjs
 
 # Kör ett skyddstest direkt (ska svara permissionDecision=deny)
@@ -62,12 +62,13 @@ npm run format:check
 
 Kör en **ny** Copilot Agent-session, välj Copilot som session target och kontrollera Hooks under *Chat: Open Customizations*. För att verifiera minneskedjan: avsluta sessionen, kontrollera `sessions/last-state.md`, starta en ny session och se om föregående branch/commit injiceras. För att verifiera ett stopp: använd en ofarlig simulerad `preToolUse`-händelse, inte verklig borttagning av tester.
 
-## Kursens kvarstående obligatoriska arbeten
+## Status inför inlämning
 
-- En ny user story med fem fasfiler, TDD och en ADR.
-- Kursledarens PR: minst ett verifierat fynd vardera inom säkerhet, struktur och kodstandard.
-- Legacy-modulen: codemap, minst fem karakteriseringstester, tre refaktoreringssteg, grön testkörning efter varje och reversibel expand/contract-migreringsplan.
-- Mät tid, token/kostnad där tillgängligt, fel, antal testfall och jämför minst ett annat arbetssätt. Logga beslut efter varje pass.
-- Slut-PDF enligt kursmallen, taggen `inlamning` och muntlig demonstration.
-
-Varken de nya hooksens körning i **din** VS Code-session eller sju lokala hook-tester är ännu verifierade i den här repoversionen. Uppdatera tabellen efter att de faktiskt körts.
+- Ny funktion genom fem faser, TDD och ADR: genomförd. Se docs/work/feature-*.md och docs/adr/0001-order-cancellation-policy.md.
+- Legacy-Python: codemap, karakteriseringstester, separata gröna refaktoreringar och reversibel expand/contract-plan genomförda. Se docs/work/legacy-price-*.md.
+- Slutlig lokal verifiering enligt sessionslogg: Jest 47/47, pytest 20/20, hooktester 8/8 samt lint, typecheck och format:check godkända. Detta är rapporterade lokala körningar, inte GitHub Actions.
+- Testskyddet blockerade först även dokumentation och rättades med ett rött och därefter grönt regressionstest. Åtta hooktester passerar efter rättningen; skyddet är fortfarande inte en fullständig säkerhetsgräns.
+- Den särskilda pull request som kursledaren delar ut ska granskas på seminariet och är därför inte genomförd här.
+- Specifika modellval per agent och allow/ask/deny i projektinställningar behöver fortfarande verifieras eller kompletteras. Nuvarande agenter ärver Copilot-modellen och hooks hanterar vissa ask/deny-fall.
+- Mätningar av faktisk tokenförbrukning och modellkostnad saknas. Det finns i stället uppmätta tidsfönster och SQL-frågeantal i sessionsloggarna.
+- Pull request #1 mergades till main. Taggen inlamning skapas på den slutliga main-versionen.
