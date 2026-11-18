@@ -35,6 +35,25 @@ class FakeCursor:
             )
         elif "select id from orders where status = 'paid'" in normalized_query:
             self.rows = list(self.connection.paid_order_ids)
+        elif "select id, discount_code from orders where id = any" in normalized_query:
+            order_ids = params[0]
+            self.rows = [
+                (order_id, self.connection.batch_orders[order_id])
+                for order_id in order_ids
+                if order_id in self.connection.batch_orders
+            ]
+        elif "select order_id, quantity, unit_price from order_lines" in normalized_query:
+            order_ids = set(params[0])
+            self.rows = [
+                row for row in self.connection.batch_lines if row[0] in order_ids
+            ]
+        elif "select code, percent from discounts" in normalized_query:
+            codes = set(params[0])
+            self.rows = [
+                (code, percent)
+                for code, percent in self.connection.batch_discounts.items()
+                if code in codes
+            ]
         else:
             raise AssertionError(f"Unexpected SQL in fake database: {query}")
 
@@ -54,12 +73,18 @@ class FakeConnection:
         lines=(),
         discount_percent=None,
         paid_order_ids=(),
+        batch_orders=None,
+        batch_lines=(),
+        batch_discounts=None,
     ):
         self.order_exists = order_exists
         self.discount_code = discount_code
         self.lines = tuple(lines)
         self.discount_percent = discount_percent
         self.paid_order_ids = list(paid_order_ids)
+        self.batch_orders = batch_orders or {}
+        self.batch_lines = tuple(batch_lines)
+        self.batch_discounts = batch_discounts or {}
         self.queries = []
         self.closed = False
 
@@ -272,6 +297,59 @@ def test_order_id_and_discount_values_are_query_parameters(load_price_module):
         (1044,),
         (1044,),
         ("VAR' OR 1=1 --",),
+    ]
+
+
+def test_batch_price_calculation_preserves_results_with_constant_query_count(
+    load_price_module,
+):
+    connection = FakeConnection(
+        batch_orders={41: None, 42: "SALE10"},
+        batch_lines=[
+            (41, 1, Decimal("10.00")),
+            (42, 1, Decimal("199.90")),
+        ],
+        batch_discounts={"SALE10": Decimal("10")},
+    )
+    module = load_price_module(connection)
+
+    prices = module.calc_prices([41, 42], connection)
+
+    assert {
+        order_id: (price.net, price.vat, price.total)
+        for order_id, price in prices.items()
+    } == {
+        41: (Decimal("10"), Decimal("2.5"), Decimal("12.5")),
+        42: (Decimal("179.91"), Decimal("44.97"), Decimal("224.88")),
+    }
+    individual_prices = {
+        41: module.calc_price(
+            41,
+            FakeConnection(
+                lines=[(1, Decimal("10.00"))],
+            ),
+        ),
+        42: module.calc_price(
+            42,
+            FakeConnection(
+                discount_code="SALE10",
+                lines=[(1, Decimal("199.90"))],
+                discount_percent=Decimal("10"),
+            ),
+        ),
+    }
+    assert {
+        order_id: (price.net, price.vat, price.total)
+        for order_id, price in individual_prices.items()
+    } == {
+        order_id: (price.net, price.vat, price.total)
+        for order_id, price in prices.items()
+    }
+    assert len(connection.queries) == 3
+    assert [query[1] for query in connection.queries] == [
+        ([41, 42],),
+        ([41, 42],),
+        (["SALE10"],),
     ]
 
 

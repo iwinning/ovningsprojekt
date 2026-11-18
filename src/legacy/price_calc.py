@@ -35,6 +35,13 @@ def calc_price(order_id, connection=None):
     return _calc_price(order_id, connection)
 
 
+def calc_prices(order_ids, connection=None):
+    if connection is None:
+        with connect_db() as managed_connection:
+            return _calc_prices(order_ids, managed_connection)
+    return _calc_prices(order_ids, connection)
+
+
 def _calc_price(order_id, connection):
     cur = connection.cursor()
     cur.execute("select discount_code from orders where id = %s", (order_id,))
@@ -48,14 +55,63 @@ def _calc_price(order_id, connection):
         (order_id,),
     )
     summa = Decimal(0)
-    for q, p in cur.fetchall():
-        summa = summa + q * p
+    lines = cur.fetchall()
 
+    discount = None
     if kod:
         cur.execute("select percent from discounts where code = %s", (kod,))
-        r = cur.fetchone()
-        if r:
-            summa = summa - summa * r[0] / 100
+        discount = cur.fetchone()
+
+    return _calculate_price(order_id, kod, lines, discount)
+
+
+def _calc_prices(order_ids, connection):
+    order_ids = list(dict.fromkeys(order_ids))
+    if not order_ids:
+        return {}
+
+    cur = connection.cursor()
+    cur.execute(
+        "select id, discount_code from orders where id = ANY(%s)",
+        (order_ids,),
+    )
+    orders = dict(cur.fetchall())
+
+    cur.execute(
+        "select order_id, quantity, unit_price from order_lines "
+        "where order_id = ANY(%s) order by order_id, id",
+        (order_ids,),
+    )
+    lines_by_order = {}
+    for order_id, quantity, unit_price in cur.fetchall():
+        lines_by_order.setdefault(order_id, []).append((quantity, unit_price))
+
+    discount_codes = list(dict.fromkeys(code for code in orders.values() if code))
+    discounts = {}
+    if discount_codes:
+        cur.execute(
+            "select code, percent from discounts where code = ANY(%s)",
+            (discount_codes,),
+        )
+        discounts = dict(cur.fetchall())
+
+    return {
+        order_id: _calculate_price(
+            order_id,
+            discount_code,
+            lines_by_order.get(order_id, ()),
+            (discounts[discount_code],) if discount_code in discounts else None,
+        )
+        for order_id, discount_code in orders.items()
+    }
+
+
+def _calculate_price(order_id, discount_code, lines, discount):
+    summa = Decimal(0)
+    for quantity, unit_price in lines:
+        summa = summa + quantity * unit_price
+    if discount_code and discount:
+        summa = summa - summa * discount[0] / 100
 
     net = _kapa(summa)
     vat = _kapa(net * MOMS / 100)
