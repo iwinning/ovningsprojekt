@@ -14,12 +14,12 @@
 
 | Agent | Ansvar | Verktyg (önskade) | Modell |
 |---|---|---|---|
-| Researcher | Kartlägg, mät baslinje | read, search, execute | Den valda Copilot-modellen |
-| Planner | Givet/När/Så och risker | read, search | Den valda Copilot-modellen |
-| Implementer | Små testdrivna ändringar | read, search, edit, execute; tdd | Den valda Copilot-modellen |
-| Reviewer | Oberoende säkerhets- och standardgranskning | read, search, execute | Den valda Copilot-modellen |
+| Researcher | Kartlägg, mät baslinje | read, search, execute | GPT-5.6 Luna, reserv GPT-5.3-Codex |
+| Planner | Givet/När/Så och risker | read, search | GPT-5.6 Luna, reserv GPT-5.3-Codex |
+| Implementer | Små testdrivna ändringar | read, search, edit, execute; tdd | GPT-5.3-Codex, reserv GPT-5.6 Luna |
+| Reviewer | Oberoende säkerhets- och standardgranskning | read, search, execute | GPT-5.6 Sol, reserv GPT-5.3-Codex |
 
-Agenterna använder den modell som är vald i Copilot-chatten. Ett specifikt modell-ID kan anges senare när det har verifierats i VS Codes modellväljare. Inga modellkostnader har ännu uppmätts. Granskning och planering görs före implementation; parallella agenter ska inte redigera samma filer.
+Agentfilerna anger nu explicita modellpreferenser (`model`) med en reservmodell samt `model-policy: preferred`. Om den önskade modellen inte finns tillgänglig kan Copilot välja en annan tillgänglig modell. Jag har kontrollerat modellnamnen mot GitHub Copilots dokumentation, men har inte åtkomst till användarens lokala modellväljare och kan därför inte verifiera att varje modell går att välja på kontot. Inga modellkostnader har uppmätts. Granskning och planering görs före implementation; parallella agenter ska inte redigera samma filer.
 
 ## Hooks: sex konkreta triggers/åtgärder
 
@@ -42,7 +42,7 @@ Config: `.github/hooks/rigg.json`; program: `.github/hooks/rigg.cjs`.
 - **Ask (fråga):** preToolUse-hook kräver godkännande för riskabla kommandon; ändring av databas och extern publicering ska granskas av användaren.
 - **Deny (stoppa):** preToolUse-hook blockerar vissa testborttagningar och testinaktiveringar.
 
-Använd **Manual permissions** i VS Code. Tillgängliga projekt-hooks kan lägga till spärrar, men ersätter inte sandlåda eller Copilots behörighetsinställningar. Första gången agenten försöker köra en hook behöver miljön vara trusted och hook-koden granskas.
+Projektfilen `.vscode/settings.json` använder `chat.permissions.default: default` och `chat.tools.terminal.autoApprove` för att tillåta vanliga läs- och testkommandon samt kräva bekräftelse för riskfyllda kommandon. `chat.tools.edits.autoApprove` kräver godkännande för exempelvis `.env`, `.vscode`-inställningar, hooks, workflows och databasschema. Hooken `protect-tests` ger `permissionDecision: deny` för vissa försök att ta bort eller inaktivera tester. En `false`-regel i VS Code betyder **ask**, inte **deny**; nej-beslutet kommer från hooken. Använd **Manual permissions** i VS Code. Projekthooks är ingen fullständig säkerhetsgräns och inställningarna måste verifieras i användarens faktiska Copilot-session.
 
 ## Demo och lokala verifieringar
 
@@ -69,6 +69,6 @@ Kör en **ny** Copilot Agent-session, välj Copilot som session target och kontr
 - Slutlig lokal verifiering enligt sessionslogg: Jest 47/47, pytest 20/20, hooktester 8/8 samt lint, typecheck och format:check godkända. Detta är rapporterade lokala körningar, inte GitHub Actions.
 - Testskyddet blockerade först även dokumentation och rättades med ett rött och därefter grönt regressionstest. Åtta hooktester passerar efter rättningen; skyddet är fortfarande inte en fullständig säkerhetsgräns.
 - Den särskilda pull request som kursledaren delar ut ska granskas på seminariet och är därför inte genomförd här.
-- Specifika modellval per agent och allow/ask/deny i projektinställningar behöver fortfarande verifieras eller kompletteras. Nuvarande agenter ärver Copilot-modellen och hooks hanterar vissa ask/deny-fall.
+- Modellpreferenser per agent och projektinställningar för allow/ask/deny är inlagda i `.github/agents/` respektive `.vscode/settings.json`. Kontroll i den lokala VS Code-sessionen av tillgängliga modeller och faktiskt behörighetsbeteende återstår.
 - Mätningar av faktisk tokenförbrukning och modellkostnad saknas. Det finns i stället uppmätta tidsfönster och SQL-frågeantal i sessionsloggarna.
-- Pull request #1 mergades till main. Taggen inlamning skapas på den slutliga main-versionen.
+- Pull request #1 mergades till main. Taggen `inlamning` ska peka på den slutliga versionen av main efter dessa konfigurationsändringar.
