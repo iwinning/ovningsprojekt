@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "node .github/hooks/rigg.cjs restore",
+        "timeoutSec": 10
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "command": "node .github/hooks/rigg.cjs protect-tests",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "command": "node .github/hooks/rigg.cjs approve-risk",
+        "timeoutSec": 10
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "command": "node .github/hooks/rigg.cjs audit",
+        "timeoutSec": 10
+      }
+    ],
+    "preCompact": [
+      {
+        "type": "command",
+        "command": "node .github/hooks/rigg.cjs checkpoint",
+        "timeoutSec": 10
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "command": "node .github/hooks/rigg.cjs save",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

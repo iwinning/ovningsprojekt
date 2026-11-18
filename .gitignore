@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .env
+.venv/
+.ai-runtime/
 __pycache__/
 .pytest_cache/
 src/legacy/price_calc.log

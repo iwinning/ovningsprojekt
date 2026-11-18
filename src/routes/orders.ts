@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { AuthedRequest, requireCustomer } from "../auth";
 import { sendError, sendResult } from "../http";
-import { createOrder, getOrder } from "../services/orderService";
+import { cancelOrder, createOrder, getOrder } from "../services/orderService";
 import { calcPrice } from "../pricing/legacyPrice";
 
 export const orders = Router();
@@ -28,16 +28,33 @@ orders.get("/orders/:id", requireCustomer, async (req, res) => {
 });
 
 // Pris för en egen beställning. Räknas av den äldre modulen src/legacy/price_calc.py.
-orders.get("/orders/:id/price", requireCustomer, async (req, res) => {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    sendError(res, { code: "invalid_input", message: "Ogiltigt id." });
-    return;
+orders.get("/orders/:id/price", requireCustomer, async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id);
+    if (id === null) {
+      sendError(res, { code: "invalid_input", message: "Ogiltigt id." });
+      return;
+    }
+    const order = await getOrder(id, (req as AuthedRequest).customerId);
+    if (!order.ok) {
+      sendError(res, order.error);
+      return;
+    }
+    sendResult(res, await calcPrice(id));
+  } catch (error) {
+    next(error);
   }
-  const order = await getOrder(id, (req as AuthedRequest).customerId);
-  if (!order.ok) {
-    sendError(res, order.error);
-    return;
+});
+
+orders.post("/orders/:id/cancel", requireCustomer, async (req, res, next) => {
+  try {
+    const id = parseId(req.params.id);
+    if (id === null) {
+      sendError(res, { code: "invalid_input", message: "Ogiltigt id." });
+      return;
+    }
+    sendResult(res, await cancelOrder(id, (req as AuthedRequest).customerId));
+  } catch (error) {
+    next(error);
   }
-  sendResult(res, await calcPrice(id));
 });
