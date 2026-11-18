@@ -9,7 +9,7 @@ argument-hint: "[funktion eller fel som ska arbetas med]"
 ## Förberedelse
 
 1. Läs `docs/standard.md`, `docs/api.md`, relevanta implementationer och befintliga tester.
-2. Kontrollera den aktuella baslinjen och notera **befintliga fel separat** från nya fel. Exempel: det har tidigare observerats ett lokalt fel i `GET /orders/:id/price`; dess grundorsak är ännu inte verifierad.
+2. Kontrollera den aktuella baslinjen och notera **befintliga fel separat** från nya fel. Exempel: `GET /orders/:id/price` hade tidigare ett Windows-relaterat 404-fel, som senare rättades och verifierades. Vid nya uppgifter ska baslinjen alltid mätas på nytt.
 3. Definiera minst ett acceptanskriterium med **Givet / När / Så** innan kod ändras. Ange lyckat fall och rimliga fel-, ägarskaps- och gränsfall.
 
 ## Rött
