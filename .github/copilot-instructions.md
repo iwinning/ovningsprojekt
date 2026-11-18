@@ -40,6 +40,8 @@ Arbeta i små, begripliga ändringar. Skapa spårbara commits efter verifierade 
 
 Kör särskilt de berörda testerna först och hela sviten före avslut. Dokumentera faktiska kommandon och utfall i sessionsloggen.
 
-## Känd lokal utgångspunkt
+## Historisk baslinje och aktuellt läge
 
-Första lokala körningen på Windows rapporterade 15 godkända av 16 Jest-tester. Testet `GET /orders/:id/price` fick HTTP 404 i stället för 200. En misstanke är att TypeScript-bryggan startar `python3`, medan projektets Python finns genom `uv`. Detta är en hypotes som ska verifieras; skriv inte att grundorsaken är bekräftad.
+Vid den första lokala Windows-körningen gav GET /orders/:id/price HTTP 404 i stället för 200, eftersom den gamla TypeScript-bryggan startade python3 som inte fungerade lokalt. Felet är åtgärdat med portabel Python-upplösning och separerad felklassning. Senaste lokala slutrapporten i docs/work/legacy-price-quality.md redovisar 47/47 Jesttester, 20/20 Pythontester och 8/8 hooktester. Ändra inte dessa påståenden utan nya faktiska testkörningar.
+
+Det särskilda PR som kursledaren ger på seminariet ska fortfarande granskas med /review-pr. Modellval per agent och projektets behörighetskonfiguration behöver verifieras inför examinationen.
