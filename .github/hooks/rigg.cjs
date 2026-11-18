@@ -18,6 +18,30 @@ function git(...args) {
   catch { return '(unavailable)'; }
 }
 function ensure(dir) { fs.mkdirSync(dir, {recursive: true}); }
+function isTestFile(file) {
+  return /(?:^|\/)tests\//i.test(String(file || '').replace(/\\/g, '/'));
+}
+function disablesTest(text) {
+  const skipPattern = new RegExp('\\b(?:describe|test|it)\\.' + '(?:skip|only)\\s*\\(', 'i');
+  const xTestPattern = new RegExp('\\b(?:xdescribe|xit|xtest)\\s*\\(', 'i');
+  return skipPattern.test(text) || xTestPattern.test(text);
+}
+function removesTestDeclaration(text) {
+  return /^(?:-\s*)?(?:it|test|describe)\s*\(/i.test(text.trim());
+}
+function protectsTestPatch(patch) {
+  const sections = patch.split(/(?=^\*\*\* (?:Update|Add|Delete) File:)/m);
+  for (const section of sections) {
+    const header = section.match(/^\*\*\* (Update|Add|Delete) File:\s*([^\r\n]+)/);
+    if (!header || !isTestFile(header[2])) continue;
+    if (header[1] === 'Delete') return true;
+    for (const line of section.split(/\r?\n/)) {
+      if (line.startsWith('+') && disablesTest(line.slice(1))) return true;
+      if (line.startsWith('-') && removesTestDeclaration(line.slice(1))) return true;
+    }
+  }
+  return false;
+}
 function snapshot(reason) {
   return {
     updatedAt: new Date().toISOString(), reason,
@@ -60,13 +84,27 @@ try {
     case 'checkpoint': save('preCompact', false); return out();
     case 'protect-tests': {
       if (!/^(bash|powershell|edit|create|apply_patch|str_replace_editor)$/.test(tool)) return out();
-      const value = text.replace(/\\\\/g, '/');
-      const tests = /(?:^|[^a-z])tests\//i.test(value);
-      const remove = /(?:git\s+rm|rm\s+(-r|-rf|-fr)|remove-item|del\s+|rmdir\s+)/i.test(value);
-      const deletePatch = /\*\*\*\s+Delete\s+File\s*:\s*[^\n]*tests\//i.test(value);
-      const skip = /\b(?:describe|test|it)\.(?:skip|only)\s*\(|\b(?:xdescribe|xit|xtest)\s*\(/i.test(value);
-      const removeDeclaration = /(?:^|\n|\\n)\s*-\s*(?:it|test|describe)\s*\(/i.test(value);
-      if ((tests && remove) || deletePatch || (tests && (skip || removeDeclaration))) {
+      const file = args.path || args.filePath || args.targetPath;
+      const patch = typeof args === 'object' && args !== null
+        ? String(args.patch || args.diff || '')
+        : '';
+      const command = typeof args === 'object' && args !== null
+        ? String(args.command || '')
+        : text;
+      const removalCommand = /(?:git\s+rm|rm\s+(-r|-rf|-fr)|remove-item|del\s+|rmdir\s+)/i.test(command);
+      const testPathInCommand = /(?:^|[\s"'`])(?:\.\/)?(?:[^"'`\s]*[\\/])?tests[\\/][^"'`\s]+/i.test(command);
+      const fileContent = typeof args === 'object' && args !== null
+        ? String(args.new_string || args.content || args.text || '')
+        : '';
+      const disablesInTestFile = isTestFile(file) && disablesTest(fileContent);
+      const removesDeclaration = isTestFile(file) &&
+        String(args.old_string || '').split(/\r?\n/).some(removesTestDeclaration);
+      if (
+        (removalCommand && testPathInCommand) ||
+        protectsTestPatch(patch) ||
+        disablesInTestFile ||
+        removesDeclaration
+      ) {
         return out({permissionDecision:'deny', permissionDecisionReason:'Testskydd: ta inte bort, isolera eller inaktivera befintliga tester. Ändra hellre produktionskoden.'});
       }
       return out();

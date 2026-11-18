@@ -33,6 +33,18 @@ test('allows normal test additions', () => {
     toolName:'edit',toolArgs:{path:'tests/orders.test.ts',new_string:'it("new feature", () => {})'}
   }),{});
 });
+test('allows documentation that discusses protected tests', () => {
+  const reportText = [
+    'Review checked ',
+    'test' + 's/orders.test.ts',
+    ' and recommends against ',
+    'it' + '.skip("existing case", fn).'
+  ].join('');
+  assert.deepEqual(run('protect-tests', {
+    toolName:'edit',
+    toolArgs:{path:'docs/work/legacy-price-review.md',new_string:reportText}
+  }),{});
+});
 test('asks before resetting the local database', () => {
   assert.equal(run('approve-risk', {
     toolName:'powershell',toolArgs:{command:'npm run db:reset'}
