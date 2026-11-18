@@ -25,3 +25,31 @@
 - Research-kontroller som faktiskt kördes finns listade i Research-dokumentet. Full testsvit och Python-testsvit kördes inte.
 - Arbetstid, testantal under framtida refaktorsteg och token/kostnad återstår att mäta. Ingen kostnad uppskattas som faktiskt utfall.
 - `git diff --check` kördes efter dokumentationen utan fel. Kontroll av arbetsytan visade inga ändringar i `src`, `tests`, `jobs` eller `db`; befintliga `package-lock.json` och `sessions/last-state.md` lämnades orörda.
+
+## Build – TDD och implementation
+
+**Verifieringsfönster:** planfasens sluttid `15:41:42 +01:00` till slutlig verifiering `16:18:27 +01:00`, totalt `36 min 45 sek` väggklocketid inklusive parallellt arbete och väntan. Aktiv arbetstid har inte mätts separat.
+
+- Karakteriseringstester och fake DB tillagda; bevarar Decimal-beräkningar, rabattbeteende, trunkering mot noll, moms, JSON-strängar och CLI-exitkod.
+- Tre små Python-refaktoreringar verifierades stegvis: parametriserad pris-SQL (`10 passed`), hanterad anslutning utan importbiverkning (`12 passed`) samt parametriserat nattjobbsdatum/kontrollerat fel (`15 passed`). Varje steg har separat commit.
+- Loggfelstest visade rött när fel tystades; efter generell OSError-varning utan känsliga detaljer passerade Python-sviten med `16 passed`.
+- CLI-karakterisering lades till utan verklig DB; full Python-svit: `18 passed`.
+- Bryggtester verifierade `LEGACY_PYTHON`, projektets venv, PATH-fallback, strikt saknad-order-JSON och generiska operativa fel. Orderuppslagningens oväntade feltest visade före rättningen ett HTTP-timeout/Express 4-fel; efter att route-felet skickas vidare blev svaret generiskt HTTP 500.
+- Full Jest-svit passerade `43/43`, inklusive tidigare känt `GET /orders/:id/price`-test som nu fick 200. Jest använde isolerad testdatabas: `TEST_DATABASE_URL` var ej satt och test-helpern valde `butik_test`.
+- `npm run lint`, `npm run typecheck`, Python `py_compile`, riktad Prettier-kontroll för ändrade TS-filer samt `git diff --check` passerade. `npm run format:check` kvarstår rött på 16 TS-filer, varav flera är orörda.
+- Inga tester togs bort/inaktiverades, ingen schemaändring eller manuell databasreset gjordes, och Python-karakteriseringarna använde endast fake DB.
+- Implementationsrapport och exakta verifieringsresultat finns i `docs/work/legacy-price-build.md`; API-information uppdateras i `docs/api.md`.
+- Pre-existerande `package-lock.json`-ändring och `sessions/last-state.md` lämnades orörda.
+
+### Build-commits
+
+- `efaf844aa8d27e76f90b4046ea035b773a1ad723` – Python-karakteriseringstester.
+- `babda6656cafbddeff6d45473988ccbc1d442c2c` – parametriserad pris-SQL.
+- `9aec875d381683e2962be683a73d74f6817f6839` – hanterad DB-anslutning och nattjobbskompatibilitet.
+- `5566205ae38950bd2af87bfa1df44ad0248ca7fc` – nattjobbsfråga och kontrollerat prisfel.
+- `697d51cf187186bc6bb2c5a76aefc45393caf09` – säker rapportering av loggfel.
+- `b6ae0ceb900b63ad838692fd10905e6a913c4926` – CLI-JSON-karakterisering.
+- `dc3597c66e520552828833e39be5ddce46231d49` – portabel Python-brygga och sanerade fel.
+- `6ab67d75c65d1f537a8060cd633a5f5094038464` – PATH-fallback och extra resolverkarakterisering.
+
+Review och slutrapport är inte startade; Build avslutas här i väntan på granskning.
