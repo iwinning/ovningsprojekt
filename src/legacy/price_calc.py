@@ -2,7 +2,7 @@
 # prisberakning for ordrar. skriven 2019, flyttad hit fran gamla admin-systemet.
 # OBS rör inte avrundningen, ekonomi har stämt av mot den.
 
-import os, sys, json, datetime
+import os, sys, json, datetime, logging
 from decimal import Decimal
 import psycopg
 
@@ -62,11 +62,14 @@ def _calc_price(order_id, connection):
     total = net + vat
 
     try:
-        f = open(LOGG, "a")
-        f.write("%s %s %s\n" % (datetime.datetime.now().isoformat(), order_id, total))
-        f.close()
-    except:
-        pass
+        with open(LOGG, "a") as log_file:
+            log_file.write(
+                "%s %s %s\n" % (datetime.datetime.now().isoformat(), order_id, total)
+            )
+    except OSError:
+        logging.getLogger(__name__).warning(
+            "Could not write legacy price calculation log."
+        )
 
     return Pris(net, vat, total)
 

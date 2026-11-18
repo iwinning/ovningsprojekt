@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import logging
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -118,6 +119,27 @@ def test_calc_price_closes_its_managed_connection(load_price_module):
         Decimal("12.5"),
     )
     assert connection.closed
+
+
+def test_log_failures_are_reported_without_order_data(
+    load_price_module, monkeypatch, caplog
+):
+    connection = FakeConnection(lines=[(1, Decimal("10.00"))])
+    module = load_price_module(connection)
+
+    def fail_open(*_args, **_kwargs):
+        raise PermissionError("private path and order data")
+
+    monkeypatch.setattr("builtins.open", fail_open)
+    with caplog.at_level(logging.WARNING):
+        price = module.calc_price(1042, connection)
+
+    assert price.total == Decimal("12.5")
+    assert [record.getMessage() for record in caplog.records] == [
+        "Could not write legacy price calculation log."
+    ]
+    assert "private path" not in caplog.text
+    assert "1042" not in caplog.text
 
 
 def test_price_without_discount_preserves_decimal_values_and_text(load_price_module):
